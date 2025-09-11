@@ -1,0 +1,25 @@
+# GUI Framework (built into Python)
+# tkinter - included with Python
+
+# Database
+# sqlite3 - included with Python
+
+# Barcode and QR code generation
+python-barcode[images]==0.14.0
+qrcode[pil]==7.4.2
+Pillow==10.0.0
+
+# PDF generation for receipts
+reportlab==4.0.4
+
+# Date handling
+python-dateutil==2.8.2
+
+# For barcode scanning (optional - USB scanners work as keyboard input)
+opencv-python==4.8.0.76
+pyzbar==0.1.9
+
+# For creating executable
+pyinstaller==5.13.2
+
+escpos==3.0
