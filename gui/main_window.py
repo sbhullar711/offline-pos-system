@@ -13,7 +13,7 @@ class MainWindow:
         self.root = tk.Tk()
         self.root.title("POS System")
         self.root.geometry("800x600")
-        self.root.configure(bg='#f0f0f0')
+        self.root.configure(bg="#b3c7d2")
         
         # Initialize database
         self.db = DatabaseManager()
@@ -38,13 +38,13 @@ class MainWindow:
             self.root,
             text="POS System",
             font=("Arial", 24, "bold"),
-            bg='#f0f0f0',
-            fg='#333333'
+            bg="#b3c7d2",
+            fg="#000000"
         )
         title_label.pack(pady=30)
         
         # Create button frame
-        button_frame = tk.Frame(self.root, bg='#f0f0f0')
+        button_frame = tk.Frame(self.root, bg='#b3c7d2')
         button_frame.pack(expand=True)
         
         # Configure grid weights for centering
@@ -67,8 +67,7 @@ class MainWindow:
             button_frame,
             text="SALE",
             bg='#4CAF50',
-            fg='white',
-            activebackground='#45a049',
+            fg='black',
             command=self.open_sale_window,
             **button_style
         )
@@ -79,8 +78,7 @@ class MainWindow:
             button_frame,
             text="ADD ITEM",
             bg='#2196F3',
-            fg='white',
-            activebackground='#1976D2',
+            fg='black',
             command=self.open_add_item_window,
             **button_style
         )
@@ -90,9 +88,8 @@ class MainWindow:
         change_price_btn = tk.Button(
             button_frame,
             text="CHANGE ITEM\nPRICE",
-            bg='#FF9800',
-            fg='white',
-            activebackground='#F57C00',
+            bg="#FFCA7A",
+            fg='black',
             command=self.open_change_price_window,
             **button_style
         )
@@ -103,8 +100,7 @@ class MainWindow:
             button_frame,
             text="CUSTOMER",
             bg='#9C27B0',
-            fg='white',
-            activebackground='#7B1FA2',
+            fg='black',
             command=self.open_customer_window,
             **button_style
         )
@@ -120,7 +116,7 @@ class MainWindow:
         self.status_bar = tk.Label(
             self.root,
             text="Ready",
-            bg='#e0e0e0',
+            bg="#32ff17",
             relief='sunken',
             anchor='w',
             font=('Arial', 10)

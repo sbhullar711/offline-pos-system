@@ -87,7 +87,7 @@ class SaleWindow:
             text="Customer",
             font=("Arial", 12, "bold"),
             bg='#f0f0f0',
-            fg='#333333'
+            fg="#AD7D7D"
         )
         customer_frame.pack(fill='x', padx=10, pady=5)
         
@@ -126,7 +126,7 @@ class SaleWindow:
             text="Enter phone number to start sale",
             font=("Arial", 10),
             bg='#f0f0f0',
-            fg='#666666'
+            fg="#A27A7A"
         )
         self.customer_info_label.pack(padx=10, pady=5)
     
@@ -137,7 +137,7 @@ class SaleWindow:
             text="Add Items",
             font=("Arial", 12, "bold"),
             bg='#f0f0f0',
-            fg='#333333'
+            fg="#C99191"
         )
         scan_frame.pack(fill='x', padx=10, pady=5)
         
@@ -238,7 +238,7 @@ class SaleWindow:
             text="TOTAL: $0.00",
             font=("Arial", 16, "bold"),
             bg='#f0f0f0',
-            fg='#333333'
+            fg="#B48585"
         )
         self.total_label.pack()
         
@@ -816,11 +816,9 @@ class ReceiptWindow:
         conn.close()
         
         # Calculate tax details
-        from config import RECEIPT_TAX_RATE, RECEIPT_COMPANY_NAME, RECEIPT_ADDRESS
+        from config import RECEIPT_COMPANY_NAME, RECEIPT_ADDRESS
         
         subtotal = sale_info[0]  # Total amount includes everything
-        tax_amount = round(subtotal * RECEIPT_TAX_RATE, 2)  # Round to 2 decimal places
-        total_with_tax = subtotal + tax_amount
         
         # Create receipt text
         receipt_text = f"""
@@ -859,13 +857,9 @@ ITEMS:
         
         receipt_text += f"""
 {'=' * 48}
-{'Subtotal:'.ljust(40)}${subtotal:.2f}
-{'Tax (8.875%):'.ljust(40)}${tax_amount:.2f}
-{'=' * 48}
-{'TOTAL:'.ljust(40)}${total_with_tax:.2f}
-{'PAID:'.ljust(40)}${tax_amount+sale_info[1]:.2f}
-{'BALANCE:'.ljust(40)}${subtotal - sale_info[1]:.2f}
-
+{'TOTAL:'.ljust(40)}${subtotal:.2f}
+{'PAID:'.ljust(40)}${sale_info[1]:.2f}
+{'BALANCE:'.ljust(40)}${subtotal - sale_info[1]:.2f} 
 Payment: {sale_info[2].replace('_', ' ').title()}
 
 {'=' * 48}

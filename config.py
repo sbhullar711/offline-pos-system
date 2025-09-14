@@ -13,9 +13,9 @@ APP_VERSION = "1.0.0"
 APP_WINDOW_SIZE = "1000x800"
 
 # Receipt settings
-RECEIPT_COMPANY_NAME = "Bellerose Tiles And Building Materials"
-RECEIPT_ADDRESS = "248-27 Jericho Tpke\nJamaica, NY 11803\nPhone: (516) 344-1708"
-RECEIPT_TAX_RATE = 0.08875  # 8% tax rate (set to 0 for no tax)
+RECEIPT_COMPANY_NAME = "Hardware store"
+RECEIPT_ADDRESS = "QUOTE"
+RECEIPT_TAX_RATE = 0.0  # 0 because it is being used for quote 
 
 # Barcode scanner settings
 BARCODE_SCANNER_ENABLED = True
@@ -33,8 +33,8 @@ COLORS = {
     'warning': '#FF9800',
     'danger': '#F44336',
     'info': '#00BCD4',
-    'light': '#f8f9fa',
-    'dark': '#343a40'
+    'light': "#c8daec",
+    'dark': "#a2bcd7"
 }
 
 # File paths
