@@ -32,12 +32,15 @@ class DatabaseManager:
             )
         ''')
         
-        # Items table
+        # Items table - UPDATED with new fields
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 upc_code VARCHAR(50) UNIQUE NOT NULL,
-                name VARCHAR(200) NOT NULL,
+                brand VARCHAR(100),
+                product VARCHAR(200) NOT NULL,
+                description TEXT,
+                cost DECIMAL(10,2) NOT NULL,
                 price DECIMAL(10,2) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -121,40 +124,98 @@ class DatabaseManager:
         conn.close()
         return result if result else 0.0
     
-    # Item operations
+    # Item operations - UPDATED methods
     def add_item(self, upc_code: str, name: str, price: float) -> int:
-        """Add a new item and return item ID"""
+        """Add a new item (legacy method - maps to new schema)"""
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO items (upc_code, name, price) VALUES (?, ?, ?)",
-            (upc_code, name, price)
+            "INSERT INTO items (upc_code, brand, product, description, cost, price) VALUES (?, ?, ?, ?, ?, ?)",
+            (upc_code, "", name, "", price, price)  # Empty brand/desc, cost=price for legacy
         )
         item_id = cursor.lastrowid
         conn.commit()
         conn.close()
         return item_id
     
-    def get_item_by_upc(self, upc_code: str) -> Optional[Dict]:
-        """Get item by UPC code"""
+    def add_item_full(self, upc_code: str, brand: str, product: str, description: str, cost: float, price: float) -> int:
+        """Add item with full details"""
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT id, upc_code, name, price FROM items WHERE upc_code = ?",
-            (upc_code,)
+            "INSERT INTO items (upc_code, brand, product, description, cost, price) VALUES (?, ?, ?, ?, ?, ?)",
+            (upc_code, brand, product, description, cost, price)
+        )
+        item_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return item_id
+    
+    def update_item_full(self, upc_code: str, brand: str, product: str, description: str, cost: float, price: float) -> bool:
+        """Update existing item with full details"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE items SET brand=?, product=?, description=?, cost=?, price=? WHERE upc_code=?",
+            (brand, product, description, cost, price, upc_code)
+        )
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return success
+    
+    def normalize_upc(self, upc_code: str) -> str:
+        """Normalize UPC code - pad with leading zero if 11 digits"""
+        upc_clean = upc_code.strip()
+        if len(upc_clean) == 11:
+            return '0' + upc_clean
+        return upc_clean
+
+    def get_item_by_upc(self, upc_code: str) -> Optional[Dict]:
+        """Get item by UPC code - handles leading zeros"""
+        # Try original UPC first
+        normalized_upc = self.normalize_upc(upc_code)
+        
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Try normalized UPC first
+        cursor.execute(
+            "SELECT id, upc_code, brand, product, description, cost, price FROM items WHERE upc_code = ?",
+            (normalized_upc,)
         )
         row = cursor.fetchone()
+        
+        # If not found and original was different, try original
+        if not row and normalized_upc != upc_code:
+            cursor.execute(
+                "SELECT id, upc_code, brand, product, description, cost, price FROM items WHERE upc_code = ?",
+                (upc_code,)
+            )
+            row = cursor.fetchone()
+        
+        # If still not found, try without leading zero
+        if not row and upc_code.startswith('0'):
+            cursor.execute(
+                "SELECT id, upc_code, brand, product, description, cost, price FROM items WHERE upc_code = ?",
+                (upc_code[1:],)
+            )
+            row = cursor.fetchone()
+        
         conn.close()
         
         if row:
             return {
                 'id': row[0],
                 'upc_code': row[1],
-                'name': row[2],
-                'price': row[3]
+                'brand': row[2],
+                'product': row[3],
+                'description': row[4],
+                'cost': row[5],
+                'price': row[6],
+                'name': row[3]  # For backward compatibility
             }
         return None
-    
     def update_item_price(self, upc_code: str, new_price: float) -> bool:
         """Update item price"""
         conn = self.get_connection()
@@ -169,10 +230,10 @@ class DatabaseManager:
         return success
     
     def get_all_items(self) -> List[Dict]:
-        """Get all items"""
+        """Get all items - UPDATED to return all fields"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, upc_code, name, price FROM items ORDER BY name")
+        cursor.execute("SELECT id, upc_code, brand, product, description, cost, price FROM items ORDER BY product")
         rows = cursor.fetchall()
         conn.close()
         
@@ -180,11 +241,23 @@ class DatabaseManager:
             {
                 'id': row[0],
                 'upc_code': row[1],
-                'name': row[2],
-                'price': row[3]
+                'brand': row[2],
+                'product': row[3],
+                'description': row[4],
+                'cost': row[5],
+                'price': row[6],
+                'name': row[3]  # For backward compatibility
             }
             for row in rows
         ]
+    
+    def clear_all_items(self) -> None:
+        """Delete all items from database"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM items")
+        conn.commit()
+        conn.close()
     
     # Sale operations
     def create_sale(self, customer_id: int, total_amount: float, 

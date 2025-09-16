@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import sys
 import os
+import platform
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,344 +14,265 @@ class AddItemWindow:
         self.parent = parent
         self.db = DatabaseManager()
         
+        # Detect platform
+        self.is_mac = platform.system() == 'Darwin'
+        self.is_windows = platform.system() == 'Windows'
+        
         # Create window
         self.window = tk.Toplevel(parent) if parent else tk.Tk()
-        self.window.title("Add New Item - POS System")
-        self.window.geometry("500x400")
-        self.window.configure(bg='#f0f0f0')
+        self.window.title("Add Items - CSV Import Only")
+        self.window.geometry("700x550")
+        self.window.configure(bg='#ffffff')
         
         # Create the interface
         self.create_widgets()
         
         # Center window
         self.center_window()
-        
-        # Focus on UPC entry
-        self.upc_entry.focus()
     
     def center_window(self):
         """Center the window on screen"""
         self.window.update_idletasks()
-        x = (self.window.winfo_screenwidth() // 2) - (500 // 2)
-        y = (self.window.winfo_screenheight() // 2) - (400 // 2)
-        self.window.geometry(f"500x400+{x}+{y}")
+        x = (self.window.winfo_screenwidth() // 2) - (700 // 2)
+        y = (self.window.winfo_screenheight() // 2) - (550 // 2)
+        self.window.geometry(f"700x550+{x}+{y}")
+    
+    def create_button(self, parent, text, command, bg_color="#4CAF50", fg_color="white", **kwargs):
+        """Create a cross-platform compatible button"""
+        if self.is_mac:
+            # On Mac, use a Frame with Label to simulate button with background color
+            btn_frame = tk.Frame(parent, bg=bg_color, highlightbackground=bg_color, highlightthickness=1)
+            btn = tk.Label(btn_frame, text=text, bg=bg_color, fg=fg_color, 
+                          cursor="hand2", padx=15, pady=10, **kwargs)
+            btn.pack()
+            
+            # Bind click events
+            btn.bind("<Button-1>", lambda e: command())
+            btn_frame.bind("<Button-1>", lambda e: command())
+            
+            # Hover effects
+            def on_enter(e):
+                btn.configure(bg=self.darken_color(bg_color))
+                btn_frame.configure(bg=self.darken_color(bg_color))
+            
+            def on_leave(e):
+                btn.configure(bg=bg_color)
+                btn_frame.configure(bg=bg_color)
+            
+            btn.bind("<Enter>", on_enter)
+            btn.bind("<Leave>", on_leave)
+            
+            return btn_frame
+        else:
+            # On Windows/Linux, regular button works fine
+            return tk.Button(parent, text=text, command=command, 
+                           bg=bg_color, fg=fg_color, 
+                           activebackground=self.darken_color(bg_color),
+                           activeforeground=fg_color, **kwargs)
+    
+    def darken_color(self, color):
+        """Darken a color for hover effect"""
+        if color.startswith('#'):
+            # Convert hex to RGB, darken, then back to hex
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            
+            # Darken by 20%
+            r = int(r * 0.8)
+            g = int(g * 0.8)
+            b = int(b * 0.8)
+            
+            return f"#{r:02x}{g:02x}{b:02x}"
+        return color
     
     def create_widgets(self):
         """Create all widgets for the add item window"""
         
-        # Title
-        title_frame = tk.Frame(self.window, bg='#f0f0f0')
-        title_frame.pack(fill='x', padx=10, pady=10)
+        # Title Frame
+        title_frame = tk.Frame(self.window, bg='white', relief=tk.RAISED, borderwidth=1)
+        title_frame.pack(fill='x', padx=10, pady=5)
         
         title_label = tk.Label(
             title_frame,
-            text="ADD NEW ITEM",
+            text="ADD ITEMS VIA CSV IMPORT",
             font=("Arial", 18, "bold"),
-            bg='#f0f0f0',
+            bg='white',
             fg='#333333'
         )
-        title_label.pack(side='left')
+        title_label.pack(side='left', padx=10, pady=5)
         
         # Close button
-        close_btn = tk.Button(
+        close_btn = self.create_button(
             title_frame,
             text="✕ Close",
             command=self.close_window,
-            bg='#f44336',
-            fg='white',
+            bg_color='#dc3545',
+            fg_color='white',
             font=("Arial", 10, "bold")
         )
-        close_btn.pack(side='right')
+        close_btn.pack(side='right', padx=10, pady=5)
         
-        # Main form
-        self.create_form()
+        # CSV Format Instructions
+        self.create_format_instructions()
         
-        # Buttons
-        self.create_buttons()
+        # Import button
+        self.create_import_section()
     
-    def create_form(self):
-        """Create the item input form"""
-        form_frame = tk.LabelFrame(
-            self.window,
-            text="Item Information",
-            font=("Arial", 12, "bold"),
-            bg='#f0f0f0',
+    def create_format_instructions(self):
+        """Create CSV format instructions"""
+        # Container with white background
+        instructions_container = tk.Frame(self.window, bg='white')
+        instructions_container.pack(fill='both', expand=True, padx=10, pady=5)
+        
+        # Title
+        title_label = tk.Label(
+            instructions_container,
+            text="CSV Format Requirements",
+            font=("Arial", 14, "bold"),
+            bg='white',
             fg='#333333'
         )
-        form_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        title_label.pack(anchor='w', padx=5, pady=(5, 0))
         
-        # Configure grid
-        form_frame.grid_columnconfigure(1, weight=1)
+        # Frame with border
+        instructions_frame = tk.Frame(instructions_container, bg='white', relief=tk.GROOVE, borderwidth=1)
+        instructions_frame.pack(fill='both', expand=True, padx=5, pady=5)
         
-        # UPC Code
-        tk.Label(
-            form_frame,
-            text="UPC/Barcode:",
-            font=("Arial", 12, "bold"),
-            bg='#f0f0f0'
-        ).grid(row=0, column=0, sticky='w', padx=10, pady=15)
+        # Format requirements text
+        format_text = """CSV FILE FORMAT REQUIREMENTS:
+
+FILE STRUCTURE:
+   • Row 1: Leave BLANK (skip row)
+   • Row 2: Headers (UPC, Brand, Product, Description, Cost, Price)
+   • Row 3+: Your item data
+
+COLUMN ORDER (must be exact):
+   1. UPC/Barcode    - Product barcode (11-12 digits)
+   2. Brand          - Product brand name
+   3. Product        - Product name
+   4. Description    - Product description
+   5. Cost           - Your cost price (numbers only)
+   6. Price          - Selling price (numbers only)
+
+DATA REQUIREMENTS:
+   • UPC: 11-12 digit numbers only (e.g., 51141347042 or 051141347042)
+   • Brand: Text (e.g., "Coca-Cola", "Samsung")
+   • Product: Text (e.g., "12oz Can", "Galaxy Phone")
+   • Description: Text (e.g., "Refreshing cola drink")
+   • Cost: Numbers only (e.g., 0.75, 45.50) - NO $ symbol
+   • Price: Numbers only (e.g., 1.25, 89.99) - NO $ symbol
+
+IMPORT LIMITS:
+   • Maximum: 10,000 items per import
+   • File size: Under 50MB recommended
+   • Format: CSV files only (.csv extension)
+
+EXAMPLE FORMAT:
+   Row 1: [BLANK]
+   Row 2: UPC,Brand,Product,Description,Cost,Price
+   Row 3: 051141347042,Coca-Cola,12oz Can,Classic Coke,0.75,1.25
+   Row 4: 123456789012,Samsung,Galaxy Phone,Smartphone,400.00,599.99"""
         
-        self.upc_entry = tk.Entry(
-            form_frame,
-            font=("Arial", 12),
-            width=25
+        # Create scrollable text widget for instructions
+        text_frame = tk.Frame(instructions_frame, bg='white')
+        text_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        
+        # Text widget with scrollbar
+        text_widget = tk.Text(
+            text_frame,
+            font=("Courier New", 10),
+            bg='#f8f9fa',
+            fg='#333333',
+            relief='flat',
+            wrap='word',
+            height=20,
+            borderwidth=1,
+            highlightbackground='#e0e0e0',
+            highlightcolor='#007bff',
+            highlightthickness=1
         )
-        self.upc_entry.grid(row=0, column=1, sticky='ew', padx=(10, 20), pady=15)
-        self.upc_entry.bind('<KeyRelease>', self.check_upc_exists)
         
-        # UPC status label
-        self.upc_status_label = tk.Label(
-            form_frame,
-            text="",
-            font=("Arial", 9),
-            bg='#f0f0f0'
+        # Scrollbar
+        scrollbar = tk.Scrollbar(text_frame, orient='vertical', command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack text widget and scrollbar
+        text_widget.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Insert instructions
+        text_widget.insert('1.0', format_text)
+        text_widget.config(state='disabled')
+        
+        # Style the text with tags for better readability
+        text_widget.tag_add("header", "1.0", "1.end")
+        text_widget.tag_config("header", font=("Courier New", 11, "bold"), foreground='#007bff')
+        
+        # Highlight section headers
+        for line_num in range(1, 30):
+            line_start = f"{line_num}.0"
+            line_end = f"{line_num}.end"
+            line_text = text_widget.get(line_start, line_end)
+            if line_text.strip().endswith(':') and not line_text.startswith('   '):
+                text_widget.tag_add("section", line_start, line_end)
+                text_widget.tag_config("section", font=("Courier New", 10, "bold"), foreground='#28a745')
+    
+    def create_import_section(self):
+        """Create import button section"""
+        # Container frame with white background
+        import_container = tk.Frame(self.window, bg='white', relief=tk.RAISED, borderwidth=1)
+        import_container.pack(fill='x', padx=10, pady=10)
+        
+        import_frame = tk.Frame(import_container, bg='white')
+        import_frame.pack(padx=20, pady=20)
+        
+        # Import button - larger and more prominent
+        import_btn = self.create_button(
+            import_frame,
+            text="📂 IMPORT CSV FILE",
+            command=self.open_import_window,
+            bg_color='#28a745',
+            fg_color='white',
+            font=("Arial", 16, "bold"),
+            width=20,
+            height=3
         )
-        self.upc_status_label.grid(row=1, column=1, sticky='w', padx=10, pady=(0, 10))
+        import_btn.pack()
         
-        # Item Name
-        tk.Label(
-            form_frame,
-            text="Item Name:",
-            font=("Arial", 12, "bold"),
-            bg='#f0f0f0'
-        ).grid(row=2, column=0, sticky='w', padx=10, pady=15)
-        
-        self.name_entry = tk.Entry(
-            form_frame,
-            font=("Arial", 12),
-            width=25
+        # Additional info
+        info_label = tk.Label(
+            import_frame,
+            text="Click above to select and import your CSV file",
+            font=("Arial", 11),
+            bg='white',
+            fg='#666666'
         )
-        self.name_entry.grid(row=2, column=1, sticky='ew', padx=(10, 20), pady=15)
+        info_label.pack(pady=(10, 0))
         
-        # Price
-        tk.Label(
-            form_frame,
-            text="Price ($):",
-            font=("Arial", 12, "bold"),
-            bg='#f0f0f0'
-        ).grid(row=3, column=0, sticky='w', padx=10, pady=15)
+        # Warning/tips section
+        tips_frame = tk.Frame(import_container, bg='#fff3cd', relief=tk.SOLID, borderwidth=1)
+        tips_frame.pack(fill='x', padx=20, pady=(0, 20))
         
-        price_frame = tk.Frame(form_frame, bg='#f0f0f0')
-        price_frame.grid(row=3, column=1, sticky='ew', padx=(10, 20), pady=15)
-        
-        tk.Label(
-            price_frame,
-            text="$",
-            font=("Arial", 12, "bold"),
-            bg='#f0f0f0'
-        ).pack(side='left')
-        
-        self.price_entry = tk.Entry(
-            price_frame,
-            font=("Arial", 12),
-            width=20
-        )
-        self.price_entry.pack(side='left', padx=(5, 0))
-        
-        # Instructions
-        instructions_frame = tk.Frame(form_frame, bg='#f0f0f0')
-        instructions_frame.grid(row=4, column=0, columnspan=2, sticky='ew', padx=10, pady=20)
-        
-        instructions_text = """Instructions:
-- UPC/Barcode: Enter the unique product code (numbers only)
-- Item Name: Enter a descriptive name for the product
-- Price: Enter the selling price (numbers only, no $ sign needed)"""
-        
-        tk.Label(
-            instructions_frame,
-            text=instructions_text,
+        tips_label = tk.Label(
+            tips_frame,
+            text="💡 TIP: Save your Excel file as CSV (Comma delimited) before importing",
             font=("Arial", 10),
-            bg='#f0f0f0',
-            fg='#666666',
-            justify='left'
-        ).pack(anchor='w')
-    
-    def create_buttons(self):
-        """Create action buttons"""
-        button_frame = tk.Frame(self.window, bg='#f0f0f0')
-        button_frame.pack(fill='x', padx=20, pady=10)
-        
-        # Add Item button
-        self.add_btn = tk.Button(
-            button_frame,
-            text="Add Item",
-            command=self.add_item,
-            bg='#4CAF50',
-            fg='white',
-            font=("Arial", 14, "bold"),
-            width=12,
-            height=2
+            bg='#fff3cd',
+            fg='#856404',
+            pady=8
         )
-        self.add_btn.pack(side='left', padx=(0, 10))
-        
-        # Clear Form button
-        clear_btn = tk.Button(
-            button_frame,
-            text="Clear Form",
-            command=self.clear_form,
-            bg='#FF9800',
-            fg='white',
-            font=("Arial", 14, "bold"),
-            width=12,
-            height=2
-        )
-        clear_btn.pack(side='left', padx=5)
-        
-        # Cancel button
-        cancel_btn = tk.Button(
-            button_frame,
-            text="Cancel",
-            command=self.close_window,
-            bg='#607D8B',
-            fg='white',
-            font=("Arial", 14, "bold"),
-            width=12,
-            height=2
-        )
-        cancel_btn.pack(side='right')
-        
-        # Bind Enter key to add item
-        self.window.bind('<Return>', lambda e: self.add_item())
+        tips_label.pack()
     
-    def check_upc_exists(self, event=None):
-        """Check if UPC already exists as user types"""
-        upc = self.upc_entry.get().strip()
-        
-        if len(upc) < 3:  # Don't check very short inputs
-            self.upc_status_label.config(text="", fg='black')
-            return
-        
-        # Check if item exists
-        existing_item = self.db.get_item_by_upc(upc)
-        
-        if existing_item:
-            self.upc_status_label.config(
-                text=f"⚠️ UPC already exists: {existing_item['name']}",
-                fg='#f44336'
-            )
-        else:
-            self.upc_status_label.config(
-                text="✓ UPC available",
-                fg='#4CAF50'
-            )
-    
-    def validate_input(self):
-        """Validate all input fields"""
-        upc = self.upc_entry.get().strip()
-        name = self.name_entry.get().strip()
-        price_str = self.price_entry.get().strip()
-        
-        # Validate UPC
-        if not upc:
-            messagebox.showwarning("Validation Error", "Please enter a UPC/Barcode")
-            self.upc_entry.focus()
-            return False
-        
-        if not upc.isdigit():
-            messagebox.showwarning("Validation Error", "UPC/Barcode should contain only numbers")
-            self.upc_entry.focus()
-            return False
-        
-        if len(upc) < 8:
-            messagebox.showwarning("Validation Error", "UPC/Barcode should be at least 8 digits")
-            self.upc_entry.focus()
-            return False
-        
-        # Check if UPC already exists
-        existing_item = self.db.get_item_by_upc(upc)
-        if existing_item:
-            messagebox.showwarning(
-                "Duplicate UPC", 
-                f"UPC '{upc}' already exists for item:\n{existing_item['name']}\n\nPlease use a different UPC code."
-            )
-            self.upc_entry.focus()
-            return False
-        
-        # Validate name
-        if not name:
-            messagebox.showwarning("Validation Error", "Please enter an item name")
-            self.name_entry.focus()
-            return False
-        
-        if len(name) < 2:
-            messagebox.showwarning("Validation Error", "Item name should be at least 2 characters")
-            self.name_entry.focus()
-            return False
-        
-        # Validate price
-        if not price_str:
-            messagebox.showwarning("Validation Error", "Please enter a price")
-            self.price_entry.focus()
-            return False
-        
+    def open_import_window(self):
+        """Open the CSV import window"""
         try:
-            price = float(price_str)
-            if price <= 0:
-                raise ValueError("Price must be positive")
-        except ValueError:
-            messagebox.showwarning("Validation Error", "Please enter a valid positive price")
-            self.price_entry.focus()
-            return False
-        
-        return True
-    
-    def add_item(self):
-        """Add the new item to database"""
-        if not self.validate_input():
-            return
-        
-        upc = self.upc_entry.get().strip()
-        name = self.name_entry.get().strip()
-        price = float(self.price_entry.get().strip())
-        
-        # Confirm addition
-        result = messagebox.askyesno(
-            "Confirm Add Item",
-            f"Add this item to inventory?\n\n"
-            f"UPC: {upc}\n"
-            f"Name: {name}\n"
-            f"Price: ${price:.2f}"
-        )
-        
-        if not result:
-            return
-        
-        try:
-            # Add item to database
-            item_id = self.db.add_item(upc, name, price)
-            
-            # Show success message
-            messagebox.showinfo(
-                "Item Added Successfully",
-                f"Item added to inventory!\n\n"
-                f"Item ID: {item_id}\n"
-                f"UPC: {upc}\n"
-                f"Name: {name}\n"
-                f"Price: ${price:.2f}"
-            )
-            
-            # Clear form for next item
-            self.clear_form()
-            
-            # Focus back to UPC entry
-            self.upc_entry.focus()
-            
+            from gui.import_items_window import ImportItemsWindow
+            ImportItemsWindow(self.window)
+        except ImportError:
+            messagebox.showerror("Error", "Import module not found. Please check your installation.")
         except Exception as e:
-            if "UNIQUE constraint failed" in str(e):
-                messagebox.showerror(
-                    "Duplicate UPC",
-                    f"UPC '{upc}' already exists in the database.\nPlease use a different UPC code."
-                )
-            else:
-                messagebox.showerror("Error", f"Error adding item: {str(e)}")
-    
-    def clear_form(self):
-        """Clear all form fields"""
-        self.upc_entry.delete(0, tk.END)
-        self.name_entry.delete(0, tk.END)
-        self.price_entry.delete(0, tk.END)
-        self.upc_status_label.config(text="")
-        self.upc_entry.focus()
+            messagebox.showerror("Error", f"Error opening import window: {str(e)}")
     
     def close_window(self):
         """Close the add item window"""

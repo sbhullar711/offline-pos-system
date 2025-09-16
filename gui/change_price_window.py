@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import sys
 import os
+import platform
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,11 +14,15 @@ class ChangePriceWindow:
         self.parent = parent
         self.db = DatabaseManager()
         
+        # Detect platform
+        self.is_mac = platform.system() == 'Darwin'
+        self.is_windows = platform.system() == 'Windows'
+        
         # Create window
         self.window = tk.Toplevel(parent) if parent else tk.Tk()
         self.window.title("Change Item Price - POS System")
         self.window.geometry("600x400")
-        self.window.configure(bg='#f0f0f0')
+        self.window.configure(bg='#ffffff')
         
         # Create the interface
         self.create_widgets()
@@ -35,32 +40,105 @@ class ChangePriceWindow:
         y = (self.window.winfo_screenheight() // 2) - (400 // 2)
         self.window.geometry(f"600x400+{x}+{y}")
     
+    def create_button(self, parent, text, command, bg_color="#4CAF50", fg_color="white", **kwargs):
+        """Create a cross-platform compatible button"""
+        if self.is_mac:
+            # On Mac, use a Frame with Label to simulate button with background color
+            btn_frame = tk.Frame(parent, bg=bg_color, highlightbackground=bg_color, highlightthickness=1)
+            btn = tk.Label(btn_frame, text=text, bg=bg_color, fg=fg_color, 
+                          cursor="hand2", padx=10, pady=5, **kwargs)
+            btn.pack()
+            
+            # Store reference for state changes
+            btn_frame.label = btn
+            btn_frame.original_bg = bg_color
+            btn_frame.original_fg = fg_color
+            
+            # Bind click events
+            def handle_click(e):
+                if not hasattr(btn_frame, 'disabled') or not btn_frame.disabled:
+                    command()
+            
+            btn.bind("<Button-1>", handle_click)
+            btn_frame.bind("<Button-1>", handle_click)
+            
+            # Hover effects
+            def on_enter(e):
+                if not hasattr(btn_frame, 'disabled') or not btn_frame.disabled:
+                    btn.configure(bg=self.darken_color(bg_color))
+                    btn_frame.configure(bg=self.darken_color(bg_color))
+            
+            def on_leave(e):
+                if not hasattr(btn_frame, 'disabled') or not btn_frame.disabled:
+                    btn.configure(bg=bg_color)
+                    btn_frame.configure(bg=bg_color)
+            
+            btn.bind("<Enter>", on_enter)
+            btn.bind("<Leave>", on_leave)
+            
+            # Add method to handle state changes
+            def config_state(state='normal'):
+                if state == 'disabled':
+                    btn_frame.disabled = True
+                    btn.configure(bg='#e0e0e0', fg='#999999')
+                    btn_frame.configure(bg='#e0e0e0')
+                else:
+                    btn_frame.disabled = False
+                    btn.configure(bg=btn_frame.original_bg, fg=btn_frame.original_fg)
+                    btn_frame.configure(bg=btn_frame.original_bg)
+            
+            btn_frame.config = lambda **kw: config_state(kw.get('state', 'normal'))
+            
+            return btn_frame
+        else:
+            # On Windows/Linux, regular button works fine
+            return tk.Button(parent, text=text, command=command, 
+                           bg=bg_color, fg=fg_color, 
+                           activebackground=self.darken_color(bg_color),
+                           activeforeground=fg_color, **kwargs)
+    
+    def darken_color(self, color):
+        """Darken a color for hover effect"""
+        if color.startswith('#'):
+            # Convert hex to RGB, darken, then back to hex
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            
+            # Darken by 20%
+            r = int(r * 0.8)
+            g = int(g * 0.8)
+            b = int(b * 0.8)
+            
+            return f"#{r:02x}{g:02x}{b:02x}"
+        return color
+    
     def create_widgets(self):
         """Create all widgets for the change price window"""
         
-        # Title
-        title_frame = tk.Frame(self.window, bg='#f0f0f0')
+        # Title Frame
+        title_frame = tk.Frame(self.window, bg='white', relief=tk.RAISED, borderwidth=1)
         title_frame.pack(fill='x', padx=10, pady=5)
         
         title_label = tk.Label(
             title_frame,
             text="CHANGE ITEM PRICE",
             font=("Arial", 18, "bold"),
-            bg='#f0f0f0',
+            bg='white',
             fg='#333333'
         )
-        title_label.pack(side='left')
+        title_label.pack(side='left', padx=10, pady=5)
         
         # Close button
-        close_btn = tk.Button(
+        close_btn = self.create_button(
             title_frame,
             text="✕ Close",
             command=self.close_window,
-            bg='#f44336',
-            fg='white',
+            bg_color='#dc3545',
+            fg_color='white',
             font=("Arial", 10, "bold")
         )
-        close_btn.pack(side='right')
+        close_btn.pack(side='right', padx=10, pady=5)
         
         # UPC lookup section
         self.create_lookup_section()
@@ -73,40 +151,53 @@ class ChangePriceWindow:
     
     def create_lookup_section(self):
         """Create UPC lookup section"""
-        lookup_frame = tk.LabelFrame(
-            self.window,
+        # Container with white background
+        lookup_container = tk.Frame(self.window, bg='white')
+        lookup_container.pack(fill='x', padx=10, pady=5)
+        
+        # Title
+        title_label = tk.Label(
+            lookup_container,
             text="Find Item",
             font=("Arial", 12, "bold"),
-            bg='#f0f0f0',
+            bg='white',
             fg='#333333'
         )
-        lookup_frame.pack(fill='x', padx=10, pady=10)
+        title_label.pack(anchor='w', padx=5, pady=(5, 0))
+        
+        # Frame with border
+        lookup_frame = tk.Frame(lookup_container, bg='white', relief=tk.GROOVE, borderwidth=1)
+        lookup_frame.pack(fill='x', padx=5, pady=5)
         
         # UPC entry
-        upc_frame = tk.Frame(lookup_frame, bg='#f0f0f0')
+        upc_frame = tk.Frame(lookup_frame, bg='white')
         upc_frame.pack(fill='x', padx=10, pady=10)
         
         tk.Label(
             upc_frame,
             text="UPC/Barcode:",
             font=("Arial", 12, "bold"),
-            bg='#f0f0f0'
+            bg='white',
+            fg='#333333'
         ).pack(side='left')
         
         self.upc_entry = tk.Entry(
             upc_frame,
             font=("Arial", 14),
-            width=25
+            width=25,
+            bg="white",
+            fg="black",
+            insertbackground="black"
         )
         self.upc_entry.pack(side='left', padx=(10, 5))
         self.upc_entry.bind('<Return>', self.lookup_item)
         
-        lookup_btn = tk.Button(
+        lookup_btn = self.create_button(
             upc_frame,
             text="Lookup Item",
             command=self.lookup_item,
-            bg='#2196F3',
-            fg='white',
+            bg_color='#007bff',
+            fg_color='white',
             font=("Arial", 12, "bold"),
             width=12
         )
@@ -117,24 +208,33 @@ class ChangePriceWindow:
             lookup_frame,
             text="Scan or enter UPC code to find item",
             font=("Arial", 10),
-            bg='#f0f0f0',
+            bg='white',
             fg='#666666'
         )
         instructions.pack(pady=(0, 10))
     
     def create_item_details_section(self):
         """Create item details display section"""
-        details_frame = tk.LabelFrame(
-            self.window,
+        # Container with white background
+        details_container = tk.Frame(self.window, bg='white')
+        details_container.pack(fill='x', padx=10, pady=5)
+        
+        # Title
+        title_label = tk.Label(
+            details_container,
             text="Item Details",
             font=("Arial", 12, "bold"),
-            bg='#f0f0f0',
+            bg='white',
             fg='#333333'
         )
-        details_frame.pack(fill='x', padx=10, pady=10)
+        title_label.pack(anchor='w', padx=5, pady=(5, 0))
+        
+        # Frame with border
+        details_frame = tk.Frame(details_container, bg='white', relief=tk.GROOVE, borderwidth=1)
+        details_frame.pack(fill='x', padx=5, pady=5)
         
         # Item info display
-        self.item_info_frame = tk.Frame(details_frame, bg='#f0f0f0')
+        self.item_info_frame = tk.Frame(details_frame, bg='white')
         self.item_info_frame.pack(fill='x', padx=10, pady=10)
         
         # Initially hidden, will be shown when item is found
@@ -142,7 +242,7 @@ class ChangePriceWindow:
             self.item_info_frame,
             text="",
             font=("Arial", 14, "bold"),
-            bg='#f0f0f0',
+            bg='white',
             fg='#333333'
         )
         
@@ -150,7 +250,7 @@ class ChangePriceWindow:
             self.item_info_frame,
             text="",
             font=("Arial", 11),
-            bg='#f0f0f0',
+            bg='white',
             fg='#666666'
         )
         
@@ -158,8 +258,8 @@ class ChangePriceWindow:
             self.item_info_frame,
             text="",
             font=("Arial", 16, "bold"),
-            bg='#f0f0f0',
-            fg='#2196F3'
+            bg='white',
+            fg='#007bff'
         )
         
         # No item found message
@@ -167,7 +267,7 @@ class ChangePriceWindow:
             self.item_info_frame,
             text="Enter UPC code to view item details",
             font=("Arial", 12),
-            bg='#f0f0f0',
+            bg='white',
             fg='#999999'
         )
         self.no_item_label.pack(pady=20)
@@ -177,48 +277,60 @@ class ChangePriceWindow:
     
     def create_price_change_section(self):
         """Create price change section"""
-        self.price_frame = tk.LabelFrame(
-            self.window,
+        # Container (initially hidden)
+        self.price_container = tk.Frame(self.window, bg='white')
+        
+        # Title
+        title_label = tk.Label(
+            self.price_container,
             text="Change Price",
             font=("Arial", 12, "bold"),
-            bg='#f0f0f0',
+            bg='white',
             fg='#333333'
         )
-        self.price_frame.pack(fill='x', padx=10, pady=10)
+        title_label.pack(anchor='w', padx=15, pady=(5, 0))
+        
+        # Frame with border
+        self.price_frame = tk.Frame(self.price_container, bg='white', relief=tk.GROOVE, borderwidth=1)
+        self.price_frame.pack(fill='x', padx=15, pady=5)
         
         # Price entry
-        price_input_frame = tk.Frame(self.price_frame, bg='#f0f0f0')
+        price_input_frame = tk.Frame(self.price_frame, bg='white')
         price_input_frame.pack(fill='x', padx=10, pady=10)
         
         tk.Label(
             price_input_frame,
             text="New Price: $",
             font=("Arial", 12, "bold"),
-            bg='#f0f0f0'
+            bg='white',
+            fg='#333333'
         ).pack(side='left')
         
         self.new_price_entry = tk.Entry(
             price_input_frame,
             font=("Arial", 14),
-            width=15
+            width=15,
+            bg="white",
+            fg="black",
+            insertbackground="black"
         )
         self.new_price_entry.pack(side='left', padx=(5, 10))
         self.new_price_entry.bind('<Return>', self.update_price)
         
-        self.update_btn = tk.Button(
+        self.update_btn = self.create_button(
             price_input_frame,
             text="Update Price",
             command=self.update_price,
-            bg='#4CAF50',
-            fg='white',
+            bg_color='#28a745',
+            fg_color='white',
             font=("Arial", 12, "bold"),
-            width=12,
-            state='disabled'
+            width=12
         )
         self.update_btn.pack(side='left', padx=5)
+        self.update_btn.config(state='disabled')
         
-        # Initially hide the price frame
-        self.price_frame.pack_forget()
+        # Initially hide the price container
+        # Don't pack it yet
     
     def lookup_item(self, event=None):
         """Look up item by UPC code"""
@@ -253,7 +365,7 @@ class ChangePriceWindow:
         self.current_price_label.pack(anchor='w', pady=(0, 10))
         
         # Show price change section
-        self.price_frame.pack(fill='x', padx=10, pady=10)
+        self.price_container.pack(fill='x', padx=10, pady=10)
         
         # Pre-fill new price with current price
         self.new_price_entry.delete(0, tk.END)
@@ -276,12 +388,12 @@ class ChangePriceWindow:
         self.current_price_label.pack_forget()
         
         # Hide price change section
-        self.price_frame.pack_forget()
+        self.price_container.pack_forget()
         
         # Show not found message
         self.no_item_label.config(
             text=f"Item with UPC '{upc}' not found",
-            fg='#f44336'
+            fg='#dc3545'
         )
         self.no_item_label.pack(pady=20)
         
@@ -344,6 +456,25 @@ class ChangePriceWindow:
                 # Clear UPC entry for next item
                 self.upc_entry.delete(0, tk.END)
                 self.upc_entry.focus()
+                
+                # Clear and hide price change section
+                self.item_name_label.pack_forget()
+                self.item_upc_label.pack_forget()
+                self.current_price_label.pack_forget()
+                self.price_container.pack_forget()
+                
+                # Reset no item label
+                self.no_item_label.config(
+                    text="Enter UPC code to view item details",
+                    fg='#999999'
+                )
+                self.no_item_label.pack(pady=20)
+                
+                # Clear current item
+                self.current_item = None
+                
+                # Disable update button
+                self.update_btn.config(state='disabled')
                 
             else:
                 messagebox.showerror("Error", "Failed to update price. Item may not exist.")
